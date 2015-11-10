@@ -17,19 +17,19 @@ module RSpec::Core
       @examples = []
       @failed_examples = []
       @pending_examples = []
+      @before_summary = {}
       @duration = @start = @load_time = nil
     end
 
     # @private
-    attr_reader :examples, :failed_examples, :pending_examples
-    # @private
-    attr_accessor :syntax_highlighting_unavailable
+    attr_reader :examples, :failed_examples, :pending_examples, :before_summary
 
     # @private
     def reset
       @examples = []
       @failed_examples = []
       @pending_examples = []
+      @before_summary = {}
       @profiler = Profiler.new if defined?(@profiler)
     end
 
@@ -95,6 +95,14 @@ module RSpec::Core
     # Send a custom message to supporting formatters.
     def message(message)
       notify :message, Notifications::MessageNotification.new(message)
+    end
+
+    # @param type A key to limit duplicate messages
+    # @param message [#to_s] A message object to output on exit to formatters
+    #
+    # Send a custom message to supporting formatters once on exit.
+    def on_exit(type, message)
+      @before_summary[type] ||= message
     end
 
     # @param event [Symbol] Name of the custom event to trigger on formatters
@@ -166,9 +174,11 @@ module RSpec::Core
                                                                        @configuration.profile_examples,
                                                                        @profiler.example_groups)
         end
+        before_summary.each do |_, text|
+          notify :message, Notifications::MessageNotification.new(text)
+        end
         notify :dump_summary, Notifications::SummaryNotification.new(@duration, @examples, @failed_examples,
-                                                                     @pending_examples, @load_time,
-                                                                     syntax_highlighting_unavailable)
+                                                                     @pending_examples, @load_time)
         notify :seed, Notifications::SeedNotification.new(@configuration.seed, seed_used?)
       end
     end

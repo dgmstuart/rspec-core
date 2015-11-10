@@ -35,32 +35,23 @@ module RSpec::Core
         reporter.finish
       end
 
-      let(:install_coderay_snippet) { "install the coderay gem" }
+      it "dumps any on_exit messages once before the summary" do
+        formatter = instance_double("RSpec::Core::Formatter::ProgressFormatter")
+        reporter.register_listener(formatter, :message, :dump_summary)
 
-      def formatter_notified_of_dump_summary(syntax_highlighting_unavailable)
-        formatter = spy("formatter")
-        reporter.syntax_highlighting_unavailable = syntax_highlighting_unavailable
-        reporter.register_listener formatter, :dump_summary
+        reporter.on_exit :install_this_gem, "install my gem"
+        reporter.on_exit :install_this_gem, "install my gem please?"
+        reporter.on_exit :install_that_gem, "install a different gem"
 
-        reporter.start(0)
+        expect(formatter).to receive(:message).with(
+          an_object_having_attributes(:message => "install my gem")
+        ).once.ordered
+        expect(formatter).to receive(:message).with(
+          an_object_having_attributes(:message => "install a different gem")
+        ).once.ordered
+        expect(formatter).to receive(:dump_summary).ordered
+
         reporter.finish
-        formatter
-      end
-
-      it "includes a note about install coderay if syntax highlighting is unavailable" do
-        formatter = formatter_notified_of_dump_summary(true)
-
-        expect(formatter).to have_received(:dump_summary).with(an_object_having_attributes(
-          :fully_formatted => a_string_including(install_coderay_snippet)
-        ))
-      end
-
-      it "does not include a note about installing coderay if syntax highlighting is available" do
-        formatter = formatter_notified_of_dump_summary(false)
-
-        expect(formatter).to have_received(:dump_summary).with(an_object_having_attributes(
-          :fully_formatted => a_string_excluding(install_coderay_snippet)
-        ))
       end
     end
 

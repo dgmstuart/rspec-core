@@ -31,10 +31,13 @@ module RSpec
         def color_enabled_implementation
           @color_enabled_implementation ||= begin
             ::Kernel.require 'coderay'
-            @configuration.reporter.syntax_highlighting_unavailable = false
             CodeRayImplementation
           rescue LoadError
-            @configuration.reporter.syntax_highlighting_unavailable = true
+            @configuration.reporter.on_exit(
+              :coderay,
+              "\nSyntax highlighting of failure snippets unavailable " \
+              "-- install the coderay gem to enable it.\n"
+            )
             NoSyntaxHighlightingImplementation
           end
         end
